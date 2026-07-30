@@ -14,3 +14,18 @@ function phore_schema_class(string|object $classNameOrObject): ClassSchema
 {
     return (new SchemaParser())->parseClass($classNameOrObject);
 }
+
+
+/**
+ * Hydriert ein Objekt aus einem Array oder stdClass.
+ *
+ * @template T of object
+ * @param class-string<T> $className
+ * @param array|stdClass $input
+ * @return T
+ * @throws ReflectionException
+ */
+function phore_schema_hydrate(string $className, array|stdClass $input): object
+{
+    return (new SchemaParser())->parseClass($className)->hydrate($input);
+}

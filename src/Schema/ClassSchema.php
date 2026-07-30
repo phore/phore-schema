@@ -7,7 +7,9 @@ namespace Phore\Schema\Schema;
 use Phore\Schema\Generator\JsonSchema\JsonClassSchemaGenerator;
 use Phore\Schema\Generator\JsonSchema\JsonSchema;
 use Phore\Schema\Generator\JsonSchema\JsonSchemaGeneratorOptions;
+use Phore\Schema\Hydrator\Hydrator;
 use Phore\Schema\Schema\Type\SchemaType;
+use stdClass;
 
 final class ClassSchema implements SchemaType
 {
@@ -38,6 +40,14 @@ final class ClassSchema implements SchemaType
     public function toJsonSchema(?JsonSchemaGeneratorOptions $options = null): JsonSchema
     {
         return (new JsonClassSchemaGenerator())->generate($this, $options);
+    }
+
+    public function hydrate(array|stdClass $input): object
+    {
+        /** @var object $hydrated */
+        $hydrated = (new Hydrator())->hydrate($this, $input);
+
+        return $hydrated;
     }
 
     public function getProperty(string $name): ?PropertySchema
