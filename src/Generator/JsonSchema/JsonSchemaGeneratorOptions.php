@@ -9,6 +9,7 @@ final class JsonSchemaGeneratorOptions
     public function __construct(
         public readonly JsonSchemaCompatibility $compatibility = JsonSchemaCompatibility::JsonSchema202012,
         public readonly bool $mergeSubTypes = false,
+        public readonly bool $inlineClassReferences = false,
     ) {
     }
 
@@ -54,5 +55,10 @@ final class JsonSchemaGeneratorOptions
     public function effectiveMergeSubTypes(): bool
     {
         return $this->mergeSubTypes || !$this->supportsDefinitions();
+    }
+
+    public function effectiveInlineClassReferences(): bool
+    {
+        return $this->inlineClassReferences || $this->compatibility === JsonSchemaCompatibility::OpenAiStructuredOutput;
     }
 }

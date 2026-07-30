@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Phore\Schema\Generator\JsonSchema;
 
+use Phore\Schema\Parser\SchemaParser;
 use Phore\Schema\Schema\ClassSchema;
 use Phore\Schema\Schema\PropertySchema;
 use Phore\Schema\Schema\Type\ArraySchemaType;
@@ -73,6 +74,13 @@ final class JsonClassSchemaGenerator
         }
 
         if ($type instanceof ClassReferenceSchemaType) {
+            if ($this->options->effectiveInlineClassReferences() && class_exists($type->className) && !in_array($type->className, $stack, true)) {
+                return $this->classSchemaToObjectSchema(
+                    (new SchemaParser())->parseClass($type->className),
+                    [...$stack, $type->className],
+                );
+            }
+
             return [
                 'type' => 'object',
                 'phpClass' => $type->className,

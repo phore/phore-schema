@@ -9,8 +9,16 @@ use Phore\Schema\Generator\JsonSchema\JsonSchemaGeneratorOptions;
 use Phore\Schema\Schema\ClassSchema;
 use Phore\Schema\Schema\PropertySchema;
 use Phore\Schema\Schema\Type\ArraySchemaType;
+use Phore\Schema\Schema\Type\ClassReferenceSchemaType;
 use Phore\Schema\Schema\Type\PrimitiveSchemaType;
 use PHPUnit\Framework\TestCase;
+
+final readonly class JsonClassSchemaGeneratorInlineAddress
+{
+    public string $city;
+
+    public int $zip;
+}
 
 final class JsonClassSchemaGeneratorTest extends TestCase
 {
@@ -88,6 +96,47 @@ final class JsonClassSchemaGeneratorTest extends TestCase
         self::assertSame(['address'], $jsonSchema['required']);
         self::assertSame('object', $jsonSchema['properties']['address']['type']);
         self::assertSame(['city'], $jsonSchema['properties']['address']['required']);
+    }
+
+    public function testCanInlineClassReferences(): void
+    {
+        $schema = new ClassSchema(
+            className: 'App\\AddressBook',
+            shortName: 'AddressBook',
+            properties: [
+                new PropertySchema(
+                    name: 'addresses',
+                    type: new ArraySchemaType(
+                        new PrimitiveSchemaType(PrimitiveSchemaType::INT),
+                        new ClassReferenceSchemaType(JsonClassSchemaGeneratorInlineAddress::class),
+                        ArraySchemaType::KIND_LIST,
+                    ),
+                    arrayKind: ArraySchemaType::KIND_LIST,
+                    isArray: true,
+                ),
+            ],
+        );
+
+        $referenced = (new JsonClassSchemaGenerator())->generate($schema)->data();
+        self::assertSame(JsonClassSchemaGeneratorInlineAddress::class, $referenced['properties']['addresses']['items']['phpClass']);
+
+        $inlined = (new JsonClassSchemaGenerator())->generate(
+            $schema,
+            new JsonSchemaGeneratorOptions(inlineClassReferences: true),
+        )->data();
+        $itemsSchema = $inlined['properties']['addresses']['items'];
+
+        self::assertSame('object', $itemsSchema['type']);
+        self::assertArrayNotHasKey('phpClass', $itemsSchema);
+        self::assertSame(false, $itemsSchema['additionalProperties']);
+        self::assertSame('string', $itemsSchema['properties']['city']['type']);
+        self::assertSame('integer', $itemsSchema['properties']['zip']['type']);
+
+        $openAiSchema = (new JsonClassSchemaGenerator())->generate(
+            $schema,
+            new JsonSchemaGeneratorOptions(JsonSchemaCompatibility::OpenAiStructuredOutput),
+        )->data();
+        self::assertArrayNotHasKey('phpClass', $openAiSchema['properties']['addresses']['items']);
     }
 
     /**
