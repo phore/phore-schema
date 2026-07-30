@@ -1,5 +1,5 @@
 {
-  "name": "phore/project",
+  "name": "phore/schema",
   "type": "library",
   "description": "",
   "license": "MIT",
@@ -11,7 +11,7 @@
   ],
   "autoload": {
     "psr-4": {
-      "Phore\\FileSystem\\": "src/"
+      "Phore\\Schema\\": "src/"
     },
     "files": [
       "src/functions.php"
