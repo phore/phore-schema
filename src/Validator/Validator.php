@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Phore\Schema\Schema\ClassSchema;
 use Phore\Schema\Schema\PropertySchema;
 use Phore\Schema\Schema\Type\ArraySchemaType;
+use Phore\Schema\Schema\Type\EnumSchemaType;
 use Phore\Schema\Schema\Type\ClassReferenceSchemaType;
 use Phore\Schema\Schema\Type\IntersectionSchemaType;
 use Phore\Schema\Schema\Type\PrimitiveSchemaType;
@@ -47,6 +48,13 @@ final class Validator
 
     private function validateType(SchemaType $schemaType, mixed $data, string $path): void
     {
+        if ($schemaType instanceof EnumSchemaType) {
+            if (!$schemaType->accepts($data)) {
+                $this->addError($path, 'expected string value of enum ' . $schemaType->className);
+            }
+            return;
+        }
+
         if ($schemaType instanceof ClassSchema) {
             $this->validateClassSchema($schemaType, $data, $path);
             return;

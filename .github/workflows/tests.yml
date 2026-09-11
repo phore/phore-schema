@@ -5,8 +5,11 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.5']
     container:
-      image: php:8.4-cli
+      image: php:${{ matrix.php }}-cli
 
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +22,10 @@ jobs:
             git \
             unzip \
             libyaml-dev \
+            libonig-dev \
+            libxml2-dev \
             $PHPIZE_DEPS
+          docker-php-ext-install mbstring dom xml xmlwriter
           pecl install yaml
           docker-php-ext-enable yaml
 

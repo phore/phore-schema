@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Phore\Schema\Parser;
 
 use Phore\Schema\Schema\Type\ArraySchemaType;
+use Phore\Schema\Schema\Type\EnumSchemaType;
 use Phore\Schema\Schema\Type\ClassReferenceSchemaType;
 use Phore\Schema\Schema\Type\IntersectionSchemaType;
 use Phore\Schema\Schema\Type\PrimitiveSchemaType;
@@ -109,6 +110,12 @@ final class TypeParser
 
     private function fromNamedType(string $name, bool $isBuiltIn, string $contextClass): SchemaType
     {
+        if (!$isBuiltIn) {
+            $className = $this->resolveClassName($name, $contextClass);
+            if (enum_exists($className)) {
+                return new EnumSchemaType($className);
+            }
+        }
         $normalized = strtolower($name);
 
         return match ($normalized) {

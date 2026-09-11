@@ -11,6 +11,7 @@ use Phore\Schema\Schema\FunctionReturnSchema;
 use Phore\Schema\Schema\FunctionSchema;
 use Phore\Schema\Schema\PropertySchema;
 use Phore\Schema\Schema\Type\ArraySchemaType;
+use Phore\Schema\Schema\Type\EnumSchemaType;
 use Phore\Schema\Schema\Type\PrimitiveSchemaType;
 use Phore\Schema\Schema\Type\SchemaType;
 use Phore\Schema\Schema\Type\UnionSchemaType;
@@ -132,6 +133,7 @@ class SchemaParser
         $type = ($docParam['type'] ?? null) !== null
             ? $this->typeParser->fromPhpDocType((string)$docParam['type'], $contextClass)
             : $nativeType;
+        $type = $this->preserveNativeEnum($nativeType, $type);
         $arrayKind = $this->findArrayKind($type);
         [$hasDefaultValue, $defaultValue] = $this->readParameterDefaultValue($parameter);
 
@@ -160,6 +162,7 @@ class SchemaParser
         $type = $docReturn['type'] !== null
             ? $this->typeParser->fromPhpDocType($docReturn['type'], $contextClass)
             : $nativeType;
+        $type = $this->preserveNativeEnum($nativeType, $type);
         $arrayKind = $this->findArrayKind($type);
 
         return new FunctionReturnSchema(
@@ -186,6 +189,7 @@ class SchemaParser
             : $nativeType;
 
         [$hasDefaultValue, $defaultValue] = $this->readDefaultValue($property, $promotedParameter);
+        $type = $this->preserveNativeEnum($nativeType, $type);
         $arrayKind = $this->findArrayKind($type);
 
         return new PropertySchema(
@@ -328,6 +332,23 @@ class SchemaParser
         }
 
         return $type;
+    }
+
+    private function preserveNativeEnum(SchemaType $nativeType, SchemaType $docType): SchemaType
+    {
+        $types = $nativeType instanceof UnionSchemaType ? $nativeType->types : [$nativeType];
+        foreach ($types as $type) {
+            if ($type instanceof EnumSchemaType) {
+                // A generic @var/@param/@return string must not erase enum constraints.
+                if ($docType instanceof PrimitiveSchemaType && $docType->getKind() === PrimitiveSchemaType::STRING) {
+                    return $nativeType;
+                }
+                if ($nativeType->toArray() !== $docType->toArray()) {
+                    throw new \InvalidArgumentException('PHPDoc type conflicts with native enum ' . $type->className);
+                }
+            }
+        }
+        return $docType;
     }
 
     private function allowsNull(SchemaType $type): bool
