@@ -25,7 +25,11 @@ jobs:
             libonig-dev \
             libxml2-dev \
             $PHPIZE_DEPS
-          docker-php-ext-install mbstring dom xml xmlwriter
+          for extension in mbstring dom xml xmlwriter; do
+            if ! php --ri "$extension" >/dev/null 2>&1; then
+              docker-php-ext-install "$extension"
+            fi
+          done
           pecl install yaml
           docker-php-ext-enable yaml
 
