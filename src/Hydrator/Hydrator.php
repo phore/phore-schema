@@ -8,6 +8,7 @@ use Phore\Schema\Parser\SchemaParser;
 use Phore\Schema\Schema\ClassSchema;
 use Phore\Schema\Schema\PropertySchema;
 use Phore\Schema\Schema\Type\ArraySchemaType;
+use Phore\Schema\Schema\Type\EnumSchemaType;
 use Phore\Schema\Schema\Type\ClassReferenceSchemaType;
 use Phore\Schema\Schema\Type\IntersectionSchemaType;
 use Phore\Schema\Schema\Type\PrimitiveSchemaType;
@@ -32,6 +33,13 @@ final class Hydrator
 
     private function hydrateType(SchemaType $schemaType, mixed $data, string $path): mixed
     {
+        if ($schemaType instanceof EnumSchemaType) {
+            if (!$schemaType->accepts($data)) {
+                throw new HydrationException($path, 'expected string value of enum ' . $schemaType->className);
+            }
+            return is_string($data) ? ($schemaType->className)::from($data) : $data;
+        }
+
         if ($schemaType instanceof ClassSchema) {
             return $this->hydrateClassSchema($schemaType, $data, $path);
         }

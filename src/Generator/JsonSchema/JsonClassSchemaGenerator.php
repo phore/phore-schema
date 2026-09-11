@@ -8,6 +8,7 @@ use Phore\Schema\Parser\SchemaParser;
 use Phore\Schema\Schema\ClassSchema;
 use Phore\Schema\Schema\PropertySchema;
 use Phore\Schema\Schema\Type\ArraySchemaType;
+use Phore\Schema\Schema\Type\EnumSchemaType;
 use Phore\Schema\Schema\Type\ClassReferenceSchemaType;
 use Phore\Schema\Schema\Type\IntersectionSchemaType;
 use Phore\Schema\Schema\Type\PrimitiveSchemaType;
@@ -61,6 +62,36 @@ final class JsonClassSchemaGenerator
      */
     private function typeToJsonSchema(SchemaType $type, bool $isRoot, array $stack): array
     {
+        if ($type instanceof EnumSchemaType) {
+            $schema = ['type' => 'string', 'enum' => array_column($type->cases, 'value')];
+            if ($type->description !== '') {
+                $schema['description'] = $type->description;
+            }
+            $branches = [];
+            $hasMetadata = false;
+            foreach ($type->cases as $case) {
+                $branch = ['enum' => [$case['value']]];
+                $description = $case['description'];
+                foreach ($case['tags'] as $tag => $values) {
+                    foreach ($values as $value) {
+                        $description .= ($description === '' ? '' : "\n\n") . '@' . $tag . ($value === '' ? '' : ' ' . $value);
+                    }
+                }
+                if ($description !== '') {
+                    $branch['description'] = $description;
+                    $hasMetadata = true;
+                }
+                if (isset($case['tags']['deprecated']) && $this->options->compatibility === JsonSchemaCompatibility::JsonSchema202012) {
+                    $branch['deprecated'] = true;
+                }
+                $branches[] = $branch;
+            }
+            if ($hasMetadata) {
+                $schema['anyOf'] = $branches;
+            }
+            return $schema;
+        }
+
         if ($type instanceof ClassSchema) {
             return $this->classSchemaToJsonSchema($type, $isRoot, $stack);
         }
@@ -189,7 +220,7 @@ final class JsonClassSchemaGenerator
         }
 
         if ($property->hasDefaultValue && $this->options->shouldEmitDefault()) {
-            $jsonSchema['default'] = $property->defaultValue;
+            $jsonSchema['default'] = $this->normalizeDefault($property->defaultValue);
         }
 
         return $jsonSchema;
@@ -247,6 +278,17 @@ final class JsonClassSchemaGenerator
             'type' => 'array',
             'items' => $valueSchema,
         ];
+    }
+
+    private function normalizeDefault(mixed $value): mixed
+    {
+        if ($value instanceof \BackedEnum) {
+            return $value->value;
+        }
+        if (is_array($value)) {
+            return array_map(fn (mixed $item): mixed => $this->normalizeDefault($item), $value);
+        }
+        return $value;
     }
 
     private function definitionName(string $className): string

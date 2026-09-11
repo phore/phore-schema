@@ -13,11 +13,11 @@ use Phore\Schema\Schema\Type\ClassReferenceSchemaType;
 use Phore\Schema\Schema\Type\PrimitiveSchemaType;
 use PHPUnit\Framework\TestCase;
 
-final readonly class JsonClassSchemaGeneratorInlineAddress
+final class JsonClassSchemaGeneratorInlineAddress
 {
-    public string $city;
+    public readonly string $city;
 
-    public int $zip;
+    public readonly int $zip;
 }
 
 final class JsonClassSchemaGeneratorTest extends TestCase
